@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>KaloriKu — Penghitung Kalori</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;0,9..144,900;1,9..144,400&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ── TOKENS ── */
+:root {
+  --bg:         #0e1209;
+  --bg2:        #141a0e;
+  --surface:    #1a2212;
+  --surface2:   #212c17;
+  --border:     #2e3d20;
+  --border2:    #3a4f28;
+  --green:      #7ec84a;
+  --green2:     #a3d96e;
+  --green-dim:  rgba(126,200,74,0.12);
+  --green-glow: rgba(126,200,74,0.22);
+  --amber:      #e8b84b;
+  --red:        #e05c4a;
+  --blue:       #5ab4d4;
+  --text:       #dde8cc;
+  --text2:      #a8bf8a;
+  --muted:      #637550;
+  --radius-sm:  10px;
+  --radius-md:  16px;
+  --radius-lg:  24px;
+  --radius-xl:  32px;
+  --shadow:     0 4px 24px rgba(0,0,0,0.5);
+  --shadow-lg:  0 8px 48px rgba(0,0,0,0.6);
+}
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Sora', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Grain texture */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  opacity: 0.03; pointer-events: none; z-index: 999;
+}
+
+/* Ambient glow */
+body::after {
+  content: '';
+  position: fixed; top: -30%; left: 50%; transform: translateX(-50%);
+  width: 700px; height: 500px;
+  background: radial-gradient(ellipse, rgba(126,200,74,0.06) 0%, transparent 70%);
+  pointer-events: none; z-index: 0;
+}
+
+.app-wrapper {
+  max-width: 460px;
+  margin: 0 auto;
+  padding: 0 18px 80px;
+  position: relative; z-index: 1;
+}
+
+/* ── HEADER ── */
+header {
+  padding: 44px 0 28px;
+  animation: slideDown 0.7s cubic-bezier(0.16,1,0.3,1) both;
+}
+
+.header-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--green-dim);
+  border: 1px solid rgba(126,200,74,0.25);
+  border-radius: 100px;
+  padding: 5px 14px 5px 10px;
+  font-size: 11px; font-weight: 600;
+  letter-spacing: 1.8px; text-transform: uppercase;
+  color: var(--green2); margin-bottom: 14px;
+}
+
+.header-eyebrow .dot {
+  width: 6px; height: 6px;
+  background: var(--green); border-radius: 50%;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+header h1 {
+  font-family: 'Fraunces', serif;
+  font-size: 3rem; font-weight: 900;
+  line-height: 1; letter-spacing: -1px; color: var(--text);
+}
+
+header h1 em {
+  font-style: italic; font-weight: 300; color: var(--green2);
+}
+
+header p {
+  margin-top: 8px; font-size: 14px;
+  font-weight: 300; color: var(--muted);
+}
+
+/* ── API KEY ── */
+.api-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 16px 18px;
+  margin-bottom: 18px;
+  animation: slideUp 0.6s 0.1s cubic-bezier(0.16,1,0.3,1) both;
+}
+
+.api-row {
+  display: flex; align-items: center; gap: 10px;
+}
+
+.api-section label {
+  font-size: 11px; font-weight: 600;
+  letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--muted); white-space: nowrap;
+}
+
+.api-section input {
+  flex: 1; min-width: 0;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 13px;
+  color: var(--text);
+  font-family: 'Sora', sans-serif; font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.api-section input::placeholder { color: var(--muted); }
+.api-section input:focus {
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px var(--green-glow);
+}
+
+.api-hint {
+  margin-top: 10px; font-size: 12px;
+  color: var(--muted); font-weight: 300;
+}
+
+.api-hint a {
+  color: var(--green2); text-decoration: none;
+  font-weight: 500; border-bottom: 1px solid rgba(163,217,110,0.3);
+  transition: border-color 0.2s;
+}
+
+.api-hint a:hover { border-color: var(--green2); }
+
+/* ── SECTION LABEL ── */
+.section-label {
+  font-size: 11px; font-weight: 600;
+  letter-spacing: 2px; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 12px;
+  display: flex; align-items: center; gap: 8px;
+}
+
+.section-label::after {
+  content: ''; flex: 1; height: 1px; background: var(--border);
+}
+
+/* ── CAMERA SECTION ── */
+.camera-section {
+  animation: slideUp 0.6s 0.2s cubic-bezier(0.16,1,0.3,1) both;
+}
+
+#camera-wrapper {
+  position: relative; width: 100%; aspect-ratio: 4/3;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+}
+
+/* Corner brackets */
+#camera-wrapper::before,
+#camera-wrapper::after,
+.cam-corner-tr,
+.cam-corner-bl {
+  position: absolute; width: 26px; height: 26px;
+  border-color: var(--green); border-style: solid;
+  z-index: 5; opacity: 0.7; pointer-events: none;
+}
+
+#camera-wrapper::before {
+  top: 16px; left: 16px;
+  border-width: 2px 0 0 2px; border-radius: 4px 0 0 0;
+}
+
+#camera-wrapper::after {
+  bottom: 16px; right: 16px;
+  border-width: 0 2px 2px 0; border-radius: 0 0 4px 0;
+}
+
+.cam-corner-tr {
+  top: 16px; right: 16px;
+  border-width: 2px 2px 0 0; border-radius: 0 4px 0 0;
+}
+
+.cam-corner-bl {
+  bottom: 16px; left: 16px;
+  border-width: 0 0 2px 2px; border-radius: 0 0 0 4px;
+}
+
+#video, #preview {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+}
+
+#preview { display: none; }
+
+/* Scan line */
+.scan-line {
+  position: absolute; top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--green), transparent);
+  opacity: 0; z-index: 4; pointer-events: none;
+}
+
+.scan-line.active {
+  opacity: 1;
+  animation: scanDown 1.8s ease-in-out infinite;
+}
+
+/* Camera overlay */
+.camera-overlay {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  padding: 32px 16px 14px;
+  background: linear-gradient(transparent, rgba(14,18,9,0.85));
+  z-index: 3; pointer-events: none;
+  display: flex; justify-content: space-between; align-items: flex-end;
+}
+
+.camera-hint {
+  font-size: 12px; color: rgba(221,232,204,0.65);
+  font-weight: 300; letter-spacing: 0.3px;
+}
+
+.camera-facing {
+  font-size: 11px; color: var(--green2);
+  font-weight: 600; letter-spacing: 1px; text-transform: uppercase;
+}
+
+/* Analyzing overlay */
+.analyzing-overlay {
+  position: absolute; inset: 0;
+  background: rgba(14,18,9,0.75);
+  display: none; align-items: center; justify-content: center;
+  flex-direction: column; gap: 14px; z-index: 6;
+  border-radius: var(--radius-xl);
+}
+
+.analyzing-overlay.active { display: flex; }
+
+.analyzing-spinner {
+  width: 48px; height: 48px;
+  border: 2px solid var(--border2);
+  border-top-color: var(--green);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.analyzing-text {
+  font-size: 13px; color: var(--green2);
+  font-weight: 500; letter-spacing: 1px;
+}
+
+/* ── CAMERA CONTROLS ── */
+.camera-controls {
+  display: flex; align-items: center;
+  justify-content: center; gap: 18px;
+  margin-top: 20px;
+}
+
+/* Flip button */
+#btn-flip {
+  width: 52px; height: 52px;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 50%;
+  color: var(--text2); font-size: 20px;
+  cursor: pointer; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.3s cubic-bezier(0.16,1,0.3,1);
+}
+
+#btn-flip:hover {
+  background: var(--surface2); border-color: var(--green);
+  color: var(--green2); transform: rotate(-180deg);
+}
+
+/* Capture button */
+#btn-capture {
+  width: 76px; height: 76px;
+  background: var(--green);
+  border: 4px solid var(--bg2); border-radius: 50%;
+  cursor: pointer; flex-shrink: 0;
+  box-shadow: 0 0 0 1px var(--border2), 0 8px 32px var(--green-glow);
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s cubic-bezier(0.16,1,0.3,1);
+}
+
+#btn-capture::after {
+  content: '';
+  width: 28px; height: 28px;
+  background: white; border-radius: 50%; opacity: 0.9;
+  transition: transform 0.15s;
+}
+
+#btn-capture:hover {
+  transform: scale(1.06);
+  box-shadow: 0 0 0 1px var(--border2), 0 12px 40px rgba(126,200,74,0.4);
+}
+
+#btn-capture:active::after { transform: scale(0.82); }
+
+/* Retake / Analyze */
+.btn-secondary {
+  height: 52px; padding: 0 20px;
+  border-radius: var(--radius-sm);
+  font-family: 'Sora', sans-serif; font-size: 13px; font-weight: 600;
+  cursor: pointer; display: none; align-items: center; gap: 7px;
+  letter-spacing: 0.3px; transition: all 0.2s cubic-bezier(0.16,1,0.3,1);
+}
+
+#btn-retake {
+  background: transparent; border: 1px solid var(--border2); color: var(--text2);
+}
+
+#btn-retake:hover { border-color: var(--text2); background: var(--surface); }
+
+#btn-analyze {
+  background: var(--green); border: none; color: var(--bg);
+  box-shadow: 0 4px 20px var(--green-glow);
+}
+
+#btn-analyze:hover {
+  background: var(--green2);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(126,200,74,0.4);
+}
+
+#btn-analyze:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+/* ── RESULT SECTION ── */
+.result-section {
+  margin-top: 20px; display: none;
+  animation: slideUp 0.5s cubic-bezier(0.16,1,0.3,1) both;
+}
+
+.result-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 22px; margin-bottom: 12px;
+  box-shadow: var(--shadow);
+}
+
+.result-top {
+  display: flex; justify-content: space-between;
+  align-items: flex-start; gap: 14px; margin-bottom: 18px;
+}
+
+.result-name {
+  font-family: 'Fraunces', serif;
+  font-size: 1.45rem; font-weight: 700;
+  color: var(--text); line-height: 1.2;
+}
+
+.result-portion {
+  font-size: 13px; color: var(--muted);
+  margin-top: 4px; font-weight: 300;
+}
+
+.calorie-pill {
+  background: linear-gradient(135deg, rgba(126,200,74,0.2), rgba(126,200,74,0.07));
+  border: 1px solid rgba(126,200,74,0.3);
+  border-radius: var(--radius-md);
+  padding: 12px 18px; text-align: center; flex-shrink: 0;
+}
+
+.calorie-pill .kcal-num {
+  font-family: 'Fraunces', serif;
+  font-size: 2rem; font-weight: 900;
+  color: var(--green2); line-height: 1; display: block;
+}
+
+.calorie-pill .kcal-label {
+  font-size: 10px; letter-spacing: 1.5px;
+  text-transform: uppercase; color: var(--green);
+  font-weight: 600; margin-top: 3px; display: block;
+}
+
+/* Macros */
+.macro-grid {
+  display: grid; grid-template-columns: repeat(3,1fr);
+  gap: 10px; margin-bottom: 16px;
+}
+
+.macro-item {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 13px 10px; text-align: center;
+  position: relative; overflow: hidden;
+}
+
+.macro-item::after {
+  content: ''; position: absolute;
+  bottom: 0; left: 0; right: 0; height: 3px;
+}
+
+.macro-item.carb::after  { background: var(--blue); }
+.macro-item.prot::after  { background: var(--green); }
+.macro-item.fat::after   { background: var(--amber); }
+
+.macro-val {
+  display: block;
+  font-family: 'Fraunces', serif;
+  font-size: 1.35rem; font-weight: 700; line-height: 1;
+}
+
+.macro-item.carb .macro-val { color: var(--blue); }
+.macro-item.prot .macro-val { color: var(--green); }
+.macro-item.fat .macro-val  { color: var(--amber); }
+
+.macro-name {
+  display: block; font-size: 10px;
+  letter-spacing: 1.2px; text-transform: uppercase;
+  color: var(--muted); margin-top: 5px; font-weight: 600;
+}
+
+.result-notes {
+  background: var(--surface2);
+  border-radius: var(--radius-sm);
+  border-left: 2px solid var(--green);
+  padding: 11px 14px; font-size: 13px;
+  color: var(--text2); line-height: 1.6; font-weight: 300;
+}
+
+/* Add to log */
+#btn-add-log {
+  width: 100%; padding: 15px;
+  background: transparent; border: 1px solid var(--border2);
+  border-radius: var(--radius-md); color: var(--text2);
+  font-family: 'Sora', sans-serif; font-size: 14px; font-weight: 600;
+  cursor: pointer; letter-spacing: 0.3px;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: all 0.2s cubic-bezier(0.16,1,0.3,1);
+}
+
+#btn-add-log:hover {
+  background: var(--green-dim); border-color: var(--green);
+  color: var(--green2); transform: translateY(-1px);
+}
+
+/* ── LOG SECTION ── */
+.log-section {
+  margin-top: 28px;
+  animation: slideUp 0.6s 0.35s cubic-bezier(0.16,1,0.3,1) both;
+}
+
+.log-top {
+  display: flex; justify-content: space-between;
+  align-items: flex-end; margin-bottom: 14px;
+}
+
+.log-top h2 {
+  font-family: 'Fraunces', serif;
+  font-size: 1.35rem; font-weight: 700;
+}
+
+.target-group {
+  display: flex; align-items: center; gap: 8px;
+}
+
+.target-group label {
+  font-size: 11px; color: var(--muted);
+  letter-spacing: 1px; text-transform: uppercase; font-weight: 600;
+}
+
+.target-group input {
+  width: 72px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 7px 10px;
+  color: var(--text); font-family: 'Fraunces', serif;
+  font-size: 14px; font-weight: 700;
+  text-align: center; outline: none;
+  transition: border-color 0.2s;
+}
+
+.target-group input:focus { border-color: var(--green); }
+
+/* Progress */
+.progress-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 18px 20px; margin-bottom: 14px;
+}
+
+.progress-info {
+  display: flex; justify-content: space-between; margin-bottom: 10px;
+}
+
+.prog-total {
+  font-family: 'Fraunces', serif;
+  font-size: 1.6rem; font-weight: 900; line-height: 1;
+}
+
+.prog-total small {
+  font-size: 12px; color: var(--muted);
+  font-family: 'Sora', sans-serif; font-weight: 400; margin-left: 4px;
+}
+
+.prog-remain {
+  text-align: right; font-size: 12px;
+  color: var(--muted); font-weight: 300;
+}
+
+.prog-remain strong {
+  display: block; font-family: 'Fraunces', serif;
+  font-size: 1rem; font-weight: 700; color: var(--green2);
+}
+
+.prog-remain strong.over { color: var(--red); }
+
+.progress-track {
+  height: 8px; background: var(--surface2);
+  border-radius: 100px; overflow: hidden; border: 1px solid var(--border);
+}
+
+.progress-fill {
+  height: 100%; border-radius: 100px;
+  background: linear-gradient(90deg, #4a9e28, var(--green), var(--green2));
+  transition: width 0.7s cubic-bezier(0.16,1,0.3,1);
+}
+
+.progress-fill.over {
+  background: linear-gradient(90deg, var(--green), var(--amber), var(--red));
+}
+
+/* Log list */
+#log-list { display: flex; flex-direction: column; gap: 8px; }
+
+.log-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 13px 16px;
+  display: flex; align-items: center; gap: 12px;
+  animation: slideUp 0.35s cubic-bezier(0.16,1,0.3,1) both;
+  transition: border-color 0.2s;
+}
+
+.log-item:hover { border-color: var(--border2); }
+
+.log-icon {
+  width: 38px; height: 38px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 10px; display: flex;
+  align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0;
+}
+
+.log-info { flex: 1; min-width: 0; }
+
+.log-name {
+  font-weight: 600; font-size: 14px; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.log-meta {
+  font-size: 12px; color: var(--muted); margin-top: 2px; font-weight: 300;
+}
+
+.log-kcal {
+  font-family: 'Fraunces', serif;
+  font-size: 1.2rem; font-weight: 700;
+  color: var(--green2); white-space: nowrap;
+}
+
+.log-kcal span {
+  font-size: 11px; color: var(--muted);
+  font-family: 'Sora', sans-serif; font-weight: 400; margin-left: 2px;
+}
+
+.btn-remove {
+  background: none; border: none; color: var(--muted);
+  font-size: 15px; cursor: pointer;
+  width: 30px; height: 30px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s; flex-shrink: 0;
+}
+
+.btn-remove:hover { background: rgba(224,92,74,0.12); color: var(--red); }
+
+/* Empty state */
+.empty-state {
+  text-align: center; padding: 36px 20px; color: var(--muted);
+}
+
+.empty-state .ei { font-size: 2.5rem; margin-bottom: 12px; display: block; opacity: 0.5; }
+.empty-state p { font-size: 13px; font-weight: 300; line-height: 1.6; }
+
+/* Error toast */
+.toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
+  background: rgba(224,92,74,0.15); border: 1px solid rgba(224,92,74,0.4);
+  color: #f4a89a; border-radius: var(--radius-md);
+  padding: 12px 20px; font-size: 13px; font-weight: 500;
+  z-index: 1000; max-width: 320px; text-align: center;
+  transition: transform 0.4s cubic-bezier(0.16,1,0.3,1), opacity 0.4s;
+  opacity: 0; pointer-events: none;
+}
+
+.toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+/* ── ANIMATIONS ── */
+@keyframes slideDown {
+  from { opacity:0; transform:translateY(-18px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+@keyframes slideUp {
+  from { opacity:0; transform:translateY(18px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+@keyframes pulse {
+  0%,100% { opacity:1; transform:scale(1); }
+  50%      { opacity:0.5; transform:scale(0.8); }
+}
+@keyframes scanDown {
+  0%   { top:0%;   opacity:0; }
+  10%  { opacity:1; }
+  90%  { opacity:1; }
+  100% { top:100%; opacity:0; }
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width:5px; }
+::-webkit-scrollbar-track { background:var(--bg); }
+::-webkit-scrollbar-thumb { background:var(--border2); border-radius:100px; }
+</style>
+</head>
+<body>
+
+<div class="app-wrapper">
+
+  <!-- HEADER -->
+  <header>
+    <div class="header-eyebrow"><span class="dot"></span>RANGGA + AI Powered</div>
+    <h1>Kalori<em>Ku</em></h1>
+    <p>Foto makananmu, hitung kalorinya secara instan</p>
+  </header>
+
+  <!-- API KEY -->
+  <div class="api-section">
+    <div class="api-row">
+      <label>API Key</label>
+      <input type="password" id="api-key" placeholder="AIza..." autocomplete="off" />
+    </div>
+    <p class="api-hint">
+      Gratis di <a href="https://aistudio.google.com/apikey" target="_blank">Google AI Studio →</a>
+      &nbsp;·&nbsp; 1500 request/hari
+    </p>
+  </div>
+
+  <!-- CAMERA -->
+  <div class="camera-section">
+    <p class="section-label">Kamera</p>
+
+    <div id="camera-wrapper">
+      <div class="cam-corner-tr"></div>
+      <div class="cam-corner-bl"></div>
+
+      <video id="video" autoplay playsinline muted></video>
+      <canvas id="snapshot" style="display:none"></canvas>
+      <img id="preview" alt="preview" />
+
+      <div class="scan-line" id="scan-line"></div>
+
+      <div class="camera-overlay">
+        <span class="camera-hint" id="camera-hint">Arahkan ke makanan</span>
+        <span class="camera-facing" id="camera-facing">↩ Belakang</span>
+      </div>
+
+      <div class="analyzing-overlay" id="analyzing-overlay">
+        <div class="analyzing-spinner"></div>
+        <span class="analyzing-text">Menganalisis…</span>
+      </div>
+    </div>
+
+    <div class="camera-controls">
+      <button id="btn-flip" title="Balik Kamera">🔄</button>
+      <button id="btn-capture" title="Ambil Foto"></button>
+      <button id="btn-retake" class="btn-secondary">↩ Ulangi</button>
+      <button id="btn-analyze" class="btn-secondary">🔍 Analisis</button>
+    </div>
+  </div>
+
+  <!-- RESULT -->
+  <div class="result-section" id="result-section">
+    <div class="result-card" id="result-box"></div>
+    <button id="btn-add-log">➕ &nbsp;Tambah ke Log Hari Ini</button>
+  </div>
+
+  <!-- LOG -->
+  <div class="log-section">
+    <div class="log-top">
+      <h2>📋 Log Hari Ini</h2>
+      <div class="target-group">
+        <label>Target</label>
+        <input type="number" id="target-cal" value="2000" min="500" max="5000" />
+      </div>
+    </div>
+
+    <div class="progress-card">
+      <div class="progress-info">
+        <div>
+          <div class="prog-total"><span id="total-num">0</span><small>kkal</small></div>
+        </div>
+        <div class="prog-remain">
+          <span>Sisa</span>
+          <strong id="remain-num">2000 kkal</strong>
+        </div>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+      </div>
+    </div>
+
+    <div id="log-list">
+      <div class="empty-state">
+        <span class="ei">🍽️</span>
+        <p>Belum ada makanan hari ini.<br>Foto makananmu dan tambah ke log!</p>
+      </div>
+    </div>
+  </div>
+
+</div><!-- .app-wrapper -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── STATE ──
+let stream = null;
+let facingMode = 'environment';
+let capturedB64 = null;
+let currentResult = null;
+let logItems = JSON.parse(localStorage.getItem('kalorikuLog') || '[]');
+
+// ── ELEMENTS ──
+const video       = document.getElementById('video');
+const snapshot    = document.getElementById('snapshot');
+const preview     = document.getElementById('preview');
+const scanLine    = document.getElementById('scan-line');
+const analyzing   = document.getElementById('analyzing-overlay');
+const btnFlip     = document.getElementById('btn-flip');
+const btnCapture  = document.getElementById('btn-capture');
+const btnRetake   = document.getElementById('btn-retake');
+const btnAnalyze  = document.getElementById('btn-analyze');
+const btnAddLog   = document.getElementById('btn-add-log');
+const resultSec   = document.getElementById('result-section');
+const resultBox   = document.getElementById('result-box');
+const cameraHint  = document.getElementById('camera-hint');
+const cameraFace  = document.getElementById('camera-facing');
+
+// ── CAMERA ──
+async function startCamera() {
+  if (stream) stream.getTracks().forEach(t => t.stop());
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode, width: { ideal: 1280 }, height: { ideal: 960 } },
+      audio: false
+    });
+    video.srcObject = stream;
+    video.style.display = 'block';
+    preview.style.display = 'none';
+    btnCapture.style.display = 'flex';
+    btnRetake.style.display = 'none';
+    btnAnalyze.style.display = 'none';
+    cameraFace.textContent = facingMode === 'environment' ? '↩ Belakang' : '↩ Depan';
+    cameraHint.textContent = 'Arahkan ke makanan';
+    capturedB64 = null;
+  } catch (e) {
+    showToast('Kamera tidak bisa diakses: ' + e.message);
+  }
+}
+
+// Flip
+btnFlip.addEventListener('click', () => {
+  facingMode = facingMode === 'environment' ? 'user' : 'environment';
+  startCamera();
+});
+
+// Capture
+btnCapture.addEventListener('click', () => {
+  const ctx = snapshot.getContext('2d');
+  snapshot.width  = video.videoWidth;
+  snapshot.height = video.videoHeight;
+  ctx.drawImage(video, 0, 0);
+
+  capturedB64 = snapshot.toDataURL('image/jpeg', 0.88).replace(/^data:image\/jpeg;base64,/, '');
+
+  preview.src = 'data:image/jpeg;base64,' + capturedB64;
+  preview.style.display = 'block';
+  video.style.display = 'none';
+
+  btnCapture.style.display = 'none';
+  btnRetake.style.display  = 'flex';
+  btnAnalyze.style.display = 'flex';
+  cameraHint.textContent   = 'Foto diambil ✓';
+  resultSec.style.display  = 'none';
+});
+
+// Retake
+btnRetake.addEventListener('click', () => {
+  resultSec.style.display = 'none';
+  currentResult = null;
+  startCamera();
+});
+
+// ── ANALYZE ──
+btnAnalyze.addEventListener('click', async () => {
+  const apiKey = document.getElementById('api-key').value.trim();
+  if (!apiKey) { showToast('Masukkan Gemini API Key dulu!'); return; }
+  if (!capturedB64) { showToast('Ambil foto dulu!'); return; }
+
+  btnAnalyze.disabled = true;
+  btnAnalyze.textContent = '⏳ Menganalisis…';
+  scanLine.classList.add('active');
+  analyzing.classList.add('active');
+
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              {
+                inline_data: {
+                  mime_type: 'image/jpeg',
+                  data: capturedB64
+                }
+              },
+              {
+                text: `Kamu adalah ahli gizi Indonesia. Analisis gambar makanan ini.
+Balas HANYA dalam format JSON murni tanpa markdown, tanpa preamble:
+{
+  "makanan": "nama makanan dalam bahasa Indonesia",
+  "emoji": "1 emoji yang cocok",
+  "porsi": "estimasi porsi misal 1 piring sedang / 200g",
+  "kalori": 350,
+  "karbohidrat": 45,
+  "protein": 15,
+  "lemak": 10,
+  "catatan": "tips gizi singkat 1 kalimat"
+}
+Jika bukan makanan, isi makanan dengan "Bukan makanan" dan kalori 0.`
+              }
+            ]
+          }],
+          generationConfig: { temperature: 0.3, maxOutputTokens: 512 }
+        })
+      }
+    );
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error?.message || 'Gagal menghubungi API');
+    }
+
+    const data = await res.json();
+    let text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    text = text.replace(/```json|```/g, '').trim();
+
+    const result = JSON.parse(text);
+    currentResult = result;
+    renderResult(result);
+
+  } catch (e) {
+    showToast('Error: ' + e.message);
+  } finally {
+    btnAnalyze.disabled = false;
+    btnAnalyze.textContent = '🔍 Analisis';
+    scanLine.classList.remove('active');
+    analyzing.classList.remove('active');
+  }
+});
+
+function renderResult(r) {
+  resultBox.innerHTML = `
+    <div class="result-top">
+      <div>
+        <div class="result-name">${r.emoji || '🍽️'} ${r.makanan}</div>
+        <div class="result-portion">${r.porsi}</div>
+      </div>
+      <div class="calorie-pill">
+        <span class="kcal-num">${r.kalori}</span>
+        <span class="kcal-label">kkal</span>
+      </div>
+    </div>
+    <div class="macro-grid">
+      <div class="macro-item carb">
+        <span class="macro-val">${r.karbohidrat}g</span>
+        <span class="macro-name">Karbo</span>
+      </div>
+      <div class="macro-item prot">
+        <span class="macro-val">${r.protein}g</span>
+        <span class="macro-name">Protein</span>
+      </div>
+      <div class="macro-item fat">
+        <span class="macro-val">${r.lemak}g</span>
+        <span class="macro-name">Lemak</span>
+      </div>
+    </div>
+    <div class="result-notes">${r.catatan}</div>
+  `;
+  resultSec.style.display = 'block';
+  resultSec.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// ── LOG ──
+btnAddLog.addEventListener('click', () => {
+  if (!currentResult) return;
+  logItems.push({ ...currentResult, time: new Date().toLocaleTimeString('id-ID', { hour:'2-digit', minute:'2-digit' }) });
+  localStorage.setItem('kalorikuLog', JSON.stringify(logItems));
+  renderLog();
+  currentResult = null;
+  resultSec.style.display = 'none';
+  showToast('✅ Ditambahkan ke log!', 'success');
+  startCamera();
+});
+
+function removeLog(i) {
+  logItems.splice(i, 1);
+  localStorage.setItem('kalorikuLog', JSON.stringify(logItems));
+  renderLog();
+}
+
+function renderLog() {
+  const target  = parseInt(document.getElementById('target-cal').value) || 2000;
+  const total   = logItems.reduce((s, x) => s + (x.kalori || 0), 0);
+  const remain  = target - total;
+  const pct     = Math.min((total / target) * 100, 100);
+  const over    = total > target;
+
+  document.getElementById('total-num').textContent  = total;
+  document.getElementById('total-num').style.color  = over ? 'var(--red)' : 'var(--text)';
+
+  const remainEl = document.getElementById('remain-num');
+  remainEl.textContent = Math.abs(remain) + ' kkal';
+  remainEl.className   = over ? 'over' : '';
+  remainEl.previousSibling.textContent = over ? 'Lebih ' : 'Sisa ';
+
+  const fill = document.getElementById('progress-fill');
+  fill.style.width = pct + '%';
+  fill.className   = 'progress-fill' + (over ? ' over' : '');
+
+  const list = document.getElementById('log-list');
+  if (!logItems.length) {
+    list.innerHTML = `
+      <div class="empty-state">
+        <span class="ei">🍽️</span>
+        <p>Belum ada makanan hari ini.<br>Foto makananmu dan tambah ke log!</p>
+      </div>`;
+    return;
+  }
+
+  list.innerHTML = logItems.map((item, i) => `
+    <div class="log-item">
+      <div class="log-icon">${item.emoji || '🍽️'}</div>
+      <div class="log-info">
+        <div class="log-name">${item.makanan}</div>
+        <div class="log-meta">${item.porsi} &nbsp;·&nbsp; ${item.time || ''}</div>
+      </div>
+      <div class="log-kcal">${item.kalori}<span>kkal</span></div>
+      <button class="btn-remove" onclick="removeLog(${i})" title="Hapus">✕</button>
+    </div>
+  `).join('');
+}
+
+// Target change
+document.getElementById('target-cal').addEventListener('input', renderLog);
+
+// ── TOAST ──
+function showToast(msg, type = 'error') {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.style.background = type === 'success'
+    ? 'rgba(126,200,74,0.15)' : 'rgba(224,92,74,0.15)';
+  toast.style.borderColor = type === 'success'
+    ? 'rgba(126,200,74,0.4)' : 'rgba(224,92,74,0.4)';
+  toast.style.color = type === 'success' ? 'var(--green2)' : '#f4a89a';
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+// ── INIT ──
+renderLog();
+startCamera();
+</script>
+</body>
+</html>
